@@ -1,0 +1,24 @@
+[debug] [2026-03-25T21:27:34.396Z] ----------------------------------------------------------------------
+[debug] [2026-03-25T21:27:34.399Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js apps:create ios kora_app (ios) --bundle-id=com.example.kora_app --json --project=kora-app-da373
+[debug] [2026-03-25T21:27:34.399Z] CLI Version:   15.11.0
+[debug] [2026-03-25T21:27:34.399Z] Platform:      win32
+[debug] [2026-03-25T21:27:34.399Z] Node Version:  v24.14.0
+[debug] [2026-03-25T21:27:34.399Z] Time:          Wed Mar 25 2026 16:27:34 GMT-0500 (hora estándar de Colombia)
+[debug] [2026-03-25T21:27:34.399Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-03-25T21:27:34.427Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-25T21:27:34.428Z] > authorizing via signed-in user (dahiana.alvarez980@pascualbravo.edu.co)
+[info] Create your IOS app in project kora-app-da373:
+[debug] [2026-03-25T21:27:34.430Z] Checked if tokens are valid: true, expires at: 1774477172542
+[debug] [2026-03-25T21:27:34.431Z] Checked if tokens are valid: true, expires at: 1774477172542
+[debug] [2026-03-25T21:27:34.431Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1beta1/projects/kora-app-da373/iosApps [none]
+[debug] [2026-03-25T21:27:34.432Z] >>> [apiv2][body] POST https://firebase.googleapis.com/v1beta1/projects/kora-app-da373/iosApps {"displayName":"kora_app (ios)","bundleId":"com.example.kora_app"}
+[debug] [2026-03-25T21:27:34.840Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1beta1/projects/kora-app-da373/iosApps 400
+[debug] [2026-03-25T21:27:34.840Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1beta1/projects/kora-app-da373/iosApps {"error":{"code":400,"message":"Request contains an invalid argument.","status":"INVALID_ARGUMENT"}}
+[debug] [2026-03-25T21:27:34.841Z] Request to https://firebase.googleapis.com/v1beta1/projects/kora-app-da373/iosApps had HTTP Error: 400, Request contains an invalid argument.
+[debug] [2026-03-25T21:27:35.028Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/kora-app-da373/iosApps had HTTP Error: 400, Request contains an invalid argument.
+    at responseToError (C:\Users\admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:53:12)
+    at RetryOperation._fn (C:\Users\admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:333:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[error] 
+[error] Error: Failed to create iOS app for project kora-app-da373. See firebase-debug.log for more info.

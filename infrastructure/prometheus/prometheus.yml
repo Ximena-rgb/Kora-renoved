@@ -1,0 +1,59 @@
+###############################################################################
+# Prometheus — Configuración de scraping
+# Kora university-social-platform
+#
+# Targets:
+#   api-core      :8000/metrics  → Django Prometheus
+#   api-media     :9102/metrics  → Worker imágenes
+#   worker-ai     :9103/metrics  → Worker Gemini
+#   redis         :9121/metrics  → redis_exporter (opcional)
+###############################################################################
+
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    project: 'kora'
+    env:     'local'
+
+# ── Alertas (opcional, expandir según necesidad) ──────────────────
+# rule_files:
+#   - "alerts/*.yml"
+
+scrape_configs:
+
+  # ── api-core (Django + django-prometheus) ─────────────────────
+  - job_name: 'api-core'
+    static_configs:
+      - targets: ['api-core:8000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'api-core'
+
+  # ── api-media worker ──────────────────────────────────────────
+  - job_name: 'api-media'
+    static_configs:
+      - targets: ['api-media:9102']
+    scrape_interval: 15s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'api-media'
+
+  # ── worker-ai ─────────────────────────────────────────────────
+  - job_name: 'worker-ai'
+    static_configs:
+      - targets: ['worker-ai:9103']
+    scrape_interval: 15s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'worker-ai'
+
+  # ── Prometheus self-monitoring ────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

@@ -1,0 +1,48 @@
+# ── Core ─────────────────────────────────────────────────────────
+django==5.0.4
+djangorestframework==3.15.1
+django-cors-headers==4.3.1
+daphne==4.1.2
+
+# ── Auth / JWT ───────────────────────────────────────────────────
+djangorestframework-simplejwt==5.3.1
+
+# ── JWT Blacklist (logout real) ───────────────────────────────────
+# Incluido en djangorestframework-simplejwt, activar en INSTALLED_APPS
+
+# ── Firebase Admin (Google Sign-In verify) ───────────────────────
+firebase-admin==6.5.0
+
+# ── TOTP MFA ─────────────────────────────────────────────────────
+pyotp==2.9.0
+qrcode==7.4.2
+Pillow==10.3.0          # qrcode necesita PIL para generar imagen
+
+# ── WebSockets ───────────────────────────────────────────────────
+channels==4.1.0
+channels-redis==4.2.0
+
+# ── Database ─────────────────────────────────────────────────────
+psycopg2-binary==2.9.9
+django-filter==24.2
+
+# ── Redis ────────────────────────────────────────────────────────
+redis==5.0.4
+
+# ── Config ───────────────────────────────────────────────────────
+python-decouple==3.8
+
+# ── Observabilidad ───────────────────────────────────────────────
+prometheus-client==0.20.0
+django-prometheus==2.3.1
+
+# ── Logging ──────────────────────────────────────────────────────
+python-json-logger==2.0.7
+
+# ── HTTP interno ─────────────────────────────────────────────────
+requests==2.32.3
+
+# ── Testing ──────────────────────────────────────────────────────
+pytest-django==4.8.0
+pytest==8.2.0
+pytest-asyncio==0.23.7
