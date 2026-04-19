@@ -58,6 +58,23 @@ def deck(request):
     if not request.user.perfil_completo:
         return Response({'error': 'Completa tu perfil antes de usar el matching.'},
                         status=status.HTTP_403_FORBIDDEN)
+
+    # Verificar que el usuario tiene la intención del modo solicitado
+    try:
+        intenciones_usuario = list(request.user.profile.intenciones or [])
+    except Exception:
+        intenciones_usuario = []
+
+    if intenciones_usuario and modo not in intenciones_usuario:
+        return Response(
+            {
+                'error': f'No tienes "{modo}" entre tus intenciones. '
+                         f'Actualiza tu perfil para acceder a este modo.',
+                'intenciones': intenciones_usuario,
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     candidatos = get_deck(request.user, modo)
     likes_info = get_likes_restantes(request.user, modo)
     return Response({

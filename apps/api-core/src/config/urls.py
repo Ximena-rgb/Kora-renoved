@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/v1/notifications/', include('modules.notifications.urls')),
     path('api/v1/ai/',            include('modules.ai_assistant.urls')),
     path('api/v1/desparche/',     include('modules.modo_desparche.urls')),
+    path('api/v1/academia/',      include('modules.academia.urls')),
 
     # ── Observabilidad ────────────────────────────────────────────
     path('metrics/', prometheus_exports.ExportToDjangoView, name='prometheus-metrics'),

@@ -6,6 +6,7 @@ import 'screen_discovery.dart';
 import 'screen_chat_list.dart';
 import 'screen_plans.dart';
 import 'screen_profile.dart';
+import 'widget_estado_boton.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,7 +27,30 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: KoraColors.bg,
-      body: IndexedStack(index: _tab, children: _screens),
+      body: Column(children: [
+        // ── Barra de estado global ─────────────────────────────────
+        SafeArea(
+          bottom: false,
+          child: Container(
+            color: KoraColors.bgCard,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Row(children: [
+              // Logo
+              ShaderMask(
+                shaderCallback: (b) => KoraGradients.mainGradient.createShader(b),
+                child: const Text('KORA',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900,
+                      color: Colors.white, letterSpacing: 1)),
+              ),
+              const Spacer(),
+              // Botón de estado + ubicación
+              const EstadoBoton(),
+            ]),
+          ),
+        ),
+        const Divider(height: 1, color: KoraColors.divider),
+        Expanded(child: IndexedStack(index: _tab, children: _screens)),
+      ]),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: KoraColors.bgCard,

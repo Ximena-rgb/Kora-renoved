@@ -68,10 +68,12 @@ class MatchingProvider with ChangeNotifier {
   List<CandidatoModel> _deck        = [];
   List<Map<String, dynamic>> _likes = [];
   List<MatchModel> _matches         = [];
-  String _modo      = 'pareja';
+  String _modo      = '';    // vacío hasta saber las intenciones reales del usuario
   bool _loading     = false;
   String? _error;
   Map<String, dynamic>? _likesInfo;
+  List<String> _intenciones = [];
+  bool _intencionesListas   = false; // false = todavía no se han cargado del backend
 
   List<CandidatoModel> get deck     => _deck;
   List<Map<String, dynamic>> get likes => _likes;
@@ -80,10 +82,58 @@ class MatchingProvider with ChangeNotifier {
   bool get loading                  => _loading;
   String? get error                 => _error;
   Map<String, dynamic>? get likesInfo => _likesInfo;
+  List<String> get intenciones      => _intenciones;
+  bool get intencionesListas        => _intencionesListas;
 
-  void setModo(String m) { _modo = m; cargarDeck(); }
+  /// Modos disponibles según intenciones.
+  /// Retorna lista vacía hasta que las intenciones hayan cargado del backend.
+  /// NUNCA muestra modos que el usuario no eligió — sin fallback a todos.
+  List<String> get modosDisponibles {
+    if (!_intencionesListas) return []; // aún cargando
+    if (_intenciones.isEmpty) return []; // cargó pero vacío → error de red o usuario sin intenciones
+    return ['pareja', 'amistad', 'estudio']
+        .where((m) => _intenciones.contains(m))
+        .toList();
+  }
+
+  /// Carga las intenciones del usuario desde el backend
+  Future<void> cargarIntenciones() async {
+    try {
+      final data = await ApiClient.get('/api/v1/onboarding/estado/');
+      final lista = data['intenciones'];
+      if (lista is List && lista.isNotEmpty) {
+        _intenciones = List<String>.from(lista);
+        // Siempre sincronizar el modo activo con las intenciones reales.
+        // Si el modo actual no está en la lista → usar el primero.
+        // Si el modo está vacío (primera carga) → usar el primero.
+        if (_modo.isEmpty || !_intenciones.contains(_modo)) {
+          _modo = _intenciones.first;
+        }
+      } else {
+        // El API respondió pero sin intenciones → dejar vacío, no fallback
+        _intenciones = [];
+        _modo = '';
+      }
+    } catch (_) {
+      // Error de red → dejar vacío, la UI mostrará estado de error
+      _intenciones = [];
+      _modo = '';
+    } finally {
+      _intencionesListas = true;
+      notifyListeners();
+    }
+  }
+
+  void setModo(String m) {
+    // Solo permitir modos que el usuario tiene en sus intenciones
+    if (_intencionesListas && _intenciones.isNotEmpty && !_intenciones.contains(m)) return;
+    _modo = m;
+    cargarDeck();
+  }
 
   Future<void> cargarDeck() async {
+    // No pedir deck si no hay modo válido todavía
+    if (_modo.isEmpty) return;
     _loading = true; _error = null; notifyListeners();
     try {
       final data = await ApiClient.get('/api/v1/matching/deck/', query: {'modo': _modo});

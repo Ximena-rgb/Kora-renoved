@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'modules.reputation.apps.ReputationConfig',
     'modules.onboarding.apps.OnboardingConfig',
     'modules.modo_desparche.apps.ModoDesparcheConfig',
+    'modules.academia.apps.AcademiaConfig',
 ]
 
 MIDDLEWARE = [
@@ -100,12 +101,14 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN':        True,
     'ALGORITHM':                'HS256',
+    'SIGNING_KEY':              config('JWT_SIGNING_KEY', default=SECRET_KEY),
     'AUTH_HEADER_TYPES':        ('Bearer',),
     'USER_ID_FIELD':            'id',
     'USER_ID_CLAIM':            'user_id',
 }
 
 FIREBASE_CREDENTIALS_PATH = config('FIREBASE_CREDENTIALS_PATH', default='')
+FIREBASE_WEB_API_KEY      = config('FIREBASE_WEB_API_KEY', default='')  # Solo para debug login
 ALLOWED_EMAIL_DOMAIN      = config('ALLOWED_EMAIL_DOMAIN',       default='')
 SERVICE_TOKEN             = config('SERVICE_TOKEN',               default='dev-service-token')
 MFA_ISSUER_NAME           = config('MFA_ISSUER_NAME',            default='Kora University')

@@ -133,8 +133,12 @@ def basico(request):
     # Actualizar perfil
     profile.apellido             = data['apellido']
     profile.fecha_nacimiento     = data['fecha_nacimiento']
+    profile.sexo_biologico       = data.get('sexo_biologico', profile.sexo_biologico)
     profile.genero               = data['genero']
     profile.genero_personalizado = data.get('genero_personalizado', '')
+    # Orientación sexual también se recoge en básico ahora
+    if data.get('orientacion_sexual'):
+        profile.orientacion_sexual = data['orientacion_sexual']
     profile.onboarding_paso      = PasoOnboarding.INTENCIONES
     profile.save(update_fields=[
         'apellido', 'fecha_nacimiento', 'genero',
@@ -149,38 +153,47 @@ def basico(request):
 
 
 # ─────────────────────────────────────────────────────────────────
-# POST /onboarding/intenciones/
+# POST /onboarding/intenciones/  (durante onboarding)
+# PATCH /onboarding/intenciones/ (post-onboarding, desde perfil)
 # ─────────────────────────────────────────────────────────────────
-@api_view(['POST'])
+@api_view(['POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def intenciones(request):
     """
-    Paso 3: Qué busca el usuario.
+    POST — Paso 3 del onboarding: qué busca el usuario.
+    PATCH — Actualización post-onboarding desde el perfil (sin restricción de paso).
     Body: { "intenciones": ["pareja", "amistad", "estudio"] }
-    Puede seleccionar de 1 a 3 opciones.
     """
     profile = _get_or_create_profile(request.user)
-    err = _verificar_paso(profile, PasoOnboarding.INTENCIONES)
-    if err:
-        return err
+
+    # Solo verificar el paso en el flujo de onboarding (POST).
+    # PATCH desde el perfil no tiene restricción de paso.
+    if request.method == 'POST':
+        err = _verificar_paso(profile, PasoOnboarding.INTENCIONES)
+        if err:
+            return err
 
     s = IntencionesSerializer(data=request.data)
     s.is_valid(raise_exception=True)
     data = s.validated_data
 
-    profile.intenciones     = data['intenciones']
-    profile.onboarding_paso = PasoOnboarding.PREFERENCIAS
-    profile.save(update_fields=['intenciones', 'onboarding_paso'])
+    profile.intenciones = data['intenciones']
+    campos = ['intenciones']
 
-    # Si solo busca estudio → saltar preferencias de pareja/amistad
+    # Solo avanzar el paso si estamos en el flujo de onboarding
+    if request.method == 'POST':
+        profile.onboarding_paso = PasoOnboarding.PREFERENCIAS
+        campos.append('onboarding_paso')
+
+    profile.save(update_fields=campos)
+
     solo_estudio = profile.intenciones == ['estudio']
 
     return Response({
-        'mensaje':         'Intenciones guardadas ✅',
-        'intenciones':     profile.intenciones,
-        'siguiente':       PasoOnboarding.PREFERENCIAS,
-        'saltar_siguiente': solo_estudio,
-        'nota': 'Si solo buscas grupos de estudio, puedes enviar preferencias vacías.' if solo_estudio else None,
+        'mensaje':          'Intenciones guardadas ✅',
+        'intenciones':      profile.intenciones,
+        'siguiente':        PasoOnboarding.PREFERENCIAS if request.method == 'POST' else None,
+        'saltar_siguiente': solo_estudio if request.method == 'POST' else None,
     })
 
 
@@ -375,11 +388,12 @@ def subir_foto(request):
         estado       = 'pending',
     )
 
-    # Publicar al broker → api-media la procesa (Sharp + NSFW)
-    # Obtener género del perfil para validación de coincidencia
+    # Publicar al broker → api-media procesa y valida
+    sexo_biologico = ''
     genero_usuario = ''
     try:
         profile_obj = _get_or_create_profile(request.user)
+        sexo_biologico = profile_obj.sexo_biologico or ''
         genero_usuario = profile_obj.genero or ''
     except Exception:
         pass
@@ -390,7 +404,8 @@ def subir_foto(request):
         'tipo':           'profile',
         'tmp_path':       tmp_path,
         'filename':       filename,
-        'genero_usuario': genero_usuario,
+        'sexo_biologico': sexo_biologico,   # campo principal
+        'genero_usuario': genero_usuario,   # legacy fallback
     })
 
     audit.log(request, audit.IMAGE_UPLOADED, {'foto_id': foto.id, 'filename': filename})

@@ -6,16 +6,162 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="KORA — Conexiones universitarias reales">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KORA">
+  <meta name="theme-color" content="#0A0A0F">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
   <link rel="icon" type="image/png" href="favicon.png"/>
   <title>KORA</title>
   <link rel="manifest" href="manifest.json">
-  <!-- Web Client ID requerido por google_sign_in para Flutter Web -->
   <meta name="google-signin-client_id" content="695071672432-5ol425us56ibi85tfmhjkavouc5cm3us.apps.googleusercontent.com">
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* Fondo negro inmediato — antes de que cargue cualquier cosa */
+    html {
+      background: #0A0A0F;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #0A0A0F;
+      overflow: hidden;
+    }
+
+    /* Ocultar la barra de progreso nativa del navegador */
+    html::-webkit-scrollbar { display: none; }
+
+    #kora-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #0A0A0F;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      transition: opacity 0.35s ease;
+    }
+
+    #kora-splash.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .logo-wrap {
+      position: relative;
+      width: 128px;
+      height: 128px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ring-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      animation: kora-spin 1.3s linear infinite;
+    }
+
+    @keyframes kora-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .logo-card {
+      width: 86px;
+      height: 86px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #BF5AF2 0%, #E040FB 50%, #FF2D55 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: kora-pulse 1.9s ease-in-out infinite;
+      box-shadow: 0 6px 32px rgba(191, 90, 242, 0.5);
+    }
+
+    @keyframes kora-pulse {
+      0%, 100% {
+        transform: scale(0.94);
+        box-shadow: 0 4px 18px rgba(191, 90, 242, 0.45);
+      }
+      50% {
+        transform: scale(1.06);
+        box-shadow: 0 8px 44px rgba(191, 90, 242, 0.72);
+      }
+    }
+
+    .heart-svg { width: 46px; height: 46px; }
+
+    .kora-name {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: 10px;
+      background: linear-gradient(135deg, #BF5AF2, #E040FB, #FF2D55);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: #E040FB;
+    }
+  </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+
+  <!-- Splash: visible desde el primer byte, antes de que Flutter cargue -->
+  <div id="kora-splash">
+    <div class="logo-wrap">
+      <svg class="ring-svg" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="kg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%"   stop-color="#BF5AF2" stop-opacity="1"/>
+            <stop offset="60%"  stop-color="#FF2D55" stop-opacity="0.8"/>
+            <stop offset="100%" stop-color="#FF2D55" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <circle cx="64" cy="64" r="60"
+          stroke="url(#kg)"
+          stroke-width="4"
+          stroke-linecap="round"
+          stroke-dasharray="310 68"/>
+      </svg>
+      <div class="logo-card">
+        <svg class="heart-svg" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M23 38 C23 38 6 26 6 15.5 C6 10.25 10.25 6 15.5 6 C18.5 6 21.2 7.4 23 9.6 C24.8 7.4 27.5 6 30.5 6 C35.75 6 40 10.25 40 15.5 C40 26 23 38 23 38Z"
+            fill="white"/>
+        </svg>
+      </div>
+    </div>
+    <span class="kora-name">KORA</span>
+  </div>
+
+  <script>
+    // ── 1. Ocultar splash cuando Flutter renderizó el primer frame ──
+    window.addEventListener('flutter-first-frame', function () {
+      var s = document.getElementById('kora-splash');
+      if (!s) return;
+      s.classList.add('fade-out');
+      setTimeout(function () { s.remove(); }, 400);
+    });
+
+    // ── 2. Cargar flutter_bootstrap.js SIN async/defer ──────────────
+    // El atributo "async" hace que el navegador muestre su propia barra
+    // de carga azul. Al cargarlo programáticamente desde JS ya estamos
+    // dentro de un script en ejecución y el navegador NO muestra la barra.
+    (function () {
+      var s = document.createElement('script');
+      s.src = 'flutter_bootstrap.js';
+      // Sin async ni defer: Flutter arranca tan pronto carga el script.
+      // El splash HTML ya cubre la pantalla así que no hay flash.
+      document.body.appendChild(s);
+    })();
+  </script>
+
 </body>
 </html>

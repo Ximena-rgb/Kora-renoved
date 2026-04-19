@@ -47,8 +47,13 @@ class BasicoSerializer(serializers.Serializer):
     nombre           = serializers.CharField(max_length=120)
     apellido         = serializers.CharField(max_length=120)
     fecha_nacimiento = serializers.DateField(input_formats=['%Y-%m-%d', '%d/%m/%Y'])
+    sexo_biologico       = serializers.ChoiceField(
+        choices=['hombre', 'mujer', 'intersexual', 'prefiero_no_decir'],
+        required=False, default='prefiero_no_decir',
+    )
     genero               = serializers.ChoiceField(choices=[c[0] for c in GENERO_CHOICES])
     genero_personalizado = serializers.CharField(max_length=60, required=False, default='', allow_blank=True)
+    orientacion_sexual   = serializers.CharField(max_length=30, required=False, default='prefiero_no_decir', allow_blank=True)
 
     def validate_fecha_nacimiento(self, value):
         hoy   = timezone.now().date()
@@ -134,6 +139,10 @@ class PersonalSerializer(serializers.Serializer):
     animales_gustan = serializers.BooleanField(required=False, default=False)
     tiene_animales  = serializers.BooleanField(required=False, default=False)
     cuales_animales = serializers.CharField(max_length=200, required=False, default='', allow_blank=True)
+    tipos_mascota   = serializers.ListField(
+        child=serializers.CharField(max_length=20),
+        required=False, default=list, max_length=10)
+    mascota_nombre  = serializers.CharField(max_length=100, required=False, default='', allow_blank=True)
     idiomas         = serializers.ListField(
         child=serializers.CharField(max_length=60), required=False, default=list, max_length=MAX_IDIOMAS)
     hijos           = serializers.ChoiceField(
@@ -143,9 +152,24 @@ class PersonalSerializer(serializers.Serializer):
         choices=[c[0] for c in ACTIVIDAD_CHOICES], required=False, default='moderado')
 
     def validate(self, data):
-        if data.get('tiene_animales') and not data.get('cuales_animales'):
-            raise serializers.ValidationError(
-                {'cuales_animales': '¿Cuáles animales tienes?'})
+        tiene  = data.get('tiene_animales', False)
+        cuales = data.get('cuales_animales', '').strip()
+        tipos  = data.get('tipos_mascota', [])
+        nombre = data.get('mascota_nombre', '').strip()
+
+        if tiene:
+            # Acepta cuales_animales (legacy) O tipos_mascota/mascota_nombre (nuevo)
+            if not cuales and not tipos and not nombre:
+                raise serializers.ValidationError(
+                    {'cuales_animales': '¿Cuáles animales tienes?'})
+            # Construir cuales_animales a partir de tipos + nombre si viene vacío
+            if not cuales and (tipos or nombre):
+                partes = []
+                if tipos:
+                    partes.append(', '.join(tipos))
+                if nombre:
+                    partes.append(nombre)
+                data['cuales_animales'] = ' — '.join(partes)
         return data
 
 

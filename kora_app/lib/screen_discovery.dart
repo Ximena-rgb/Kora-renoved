@@ -23,8 +23,13 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MatchingProvider>().cargarDeck();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final mp = context.read<MatchingProvider>();
+      await mp.cargarIntenciones();
+      // Solo pedir el deck si hay un modo válido (intenciones cargadas correctamente)
+      if (mp.modo.isNotEmpty) {
+        mp.cargarDeck();
+      }
     });
   }
 
@@ -45,14 +50,11 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
   Widget _buildHeader() {
     return Container(
       color: KoraColors.bg,
-      padding: const EdgeInsets.fromLTRB(20, 56, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
       child: Row(children: [
-        ShaderMask(
-          shaderCallback: (b) => KoraGradients.mainGradient.createShader(b),
-          child: const Text('KORA',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900,
-                color: Colors.white, letterSpacing: -1)),
-        ),
+        const Text('Descubrir',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
+              color: KoraColors.textPrimary)),
         const Spacer(),
         GestureDetector(
           onTap: _abrirFiltros,
@@ -224,22 +226,61 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
   }
 
   Widget _buildModoSelector() {
-    final mp    = context.watch<MatchingProvider>();
-    final modos = ['pareja', 'amistad', 'estudio'];
-    final labels = ['❤️ Pareja', '🤝 Amistad', '📚 Estudio'];
+    final mp = context.watch<MatchingProvider>();
+
+    // Todavía cargando intenciones del backend → skeleton
+    if (!mp.intencionesListas) {
+      return Container(
+        color: KoraColors.bg,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Container(
+          height: 40,
+          decoration: BoxDecoration(
+            color: KoraColors.bgElevated,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+
+    final modos = mp.modosDisponibles;
+
+    // Sin intenciones después de cargar → error de red o perfil incompleto
+    if (modos.isEmpty) {
+      return const SizedBox.shrink(); // _buildDeck mostrará el estado de error
+    }
+
+    // Un solo modo → no mostrar selector, simplemente activarlo
+    if (modos.length == 1) {
+      if (mp.modo != modos.first) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) mp.setModo(modos.first);
+        });
+      }
+      return const SizedBox.shrink();
+    }
+
+    const allModos  = ['pareja', 'amistad', 'estudio'];
+    const allLabels = ['❤️ Pareja', '🤝 Amistad', '📚 Estudio'];
+
+    final labels = allModos
+        .asMap().entries
+        .where((e) => modos.contains(e.value))
+        .map((e) => allLabels[e.key])
+        .toList();
 
     return Container(
       color: KoraColors.bg,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Row(
-        children: List.generate(3, (i) {
+        children: List.generate(modos.length, (i) {
           final sel = mp.modo == modos[i];
           return Expanded(
             child: GestureDetector(
               onTap: () => mp.setModo(modos[i]),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
+                margin: EdgeInsets.only(right: i < modos.length - 1 ? 8 : 0),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),

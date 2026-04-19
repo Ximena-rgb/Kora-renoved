@@ -1,0 +1,93 @@
+# ════════════════════════════════════════════════════════════════
+#  KORA — .gitignore
+# ════════════════════════════════════════════════════════════════
+
+# ── Archivos de entorno y secretos ───────────────────────────────
+.env
+*.env
+!*.env.example
+
+# ── Credenciales Firebase ─────────────────────────────────────────
+firebase-credentials.json
+!firebase-credentials.example.json
+
+# ── Google Services (Android / iOS) ──────────────────────────────
+google-services.json
+!google-services.example.json
+GoogleService-Info.plist
+
+# ── Claves y certificados ─────────────────────────────────────────
+*.key
+*.pem
+*.p8
+*.p12
+*.keystore
+*.jks
+
+# ── Python / Django ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+*.whl
+venv/
+env/
+.venv/
+.env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+htmlcov/
+.pytest_cache/
+*.mo
+*.pot
+staticfiles/
+media/
+
+# ── Flutter / Dart ────────────────────────────────────────────────
+kora_app/.dart_tool/
+kora_app/.flutter-plugins
+kora_app/.flutter-plugins-dependencies
+kora_app/.packages
+kora_app/build/
+kora_app/pubspec.lock
+kora_app/android/.gradle/
+kora_app/android/local.properties
+kora_app/android/key.properties
+kora_app/ios/.symlinks/
+kora_app/ios/Pods/
+kora_app/ios/Flutter/.last_build_id
+kora_app/macos/.symlinks/
+kora_app/macos/Pods/
+kora_app/windows/flutter/generated_plugin_registrant.cc
+kora_app/windows/flutter/generated_plugin_registrant.h
+kora_app/windows/flutter/generated_plugins.cmake
+
+# ── Docker ────────────────────────────────────────────────────────
+infrastructure/postgres/data/
+
+# ── Storage generado ──────────────────────────────────────────────
+storage/uploads/*
+storage/logs/*
+!storage/uploads/.gitkeep
+!storage/logs/.gitkeep
+
+# ── IDEs ──────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Node (si aplica) ──────────────────────────────────────────────
+node_modules/
+npm-debug.log*

@@ -8,7 +8,6 @@ está ligeramente detrás del reloj del cliente. Se resuelve con clock_skew_seco
 """
 
 import logging
-from functools import lru_cache
 
 from django.conf import settings
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
@@ -20,7 +19,6 @@ logger = logging.getLogger(__name__)
 CLOCK_SKEW_SECONDS = 60
 
 
-@lru_cache(maxsize=1)
 def _get_firebase_app():
     try:
         import firebase_admin
@@ -76,16 +74,30 @@ def verify_google_token(id_token: str) -> dict:
         exc_type = type(exc).__name__
         logger.error(f'[Firebase] Error: {exc_type}: {exc}')
 
+        # Mapear errores específicos de Firebase a mensajes amigables
         try:
             from firebase_admin import auth as firebase_auth
+
             if isinstance(exc, firebase_auth.RevokedIdTokenError):
                 raise AuthenticationFailed('Token revocado. Vuelve a iniciar sesión.')
-            if isinstance(exc, firebase_auth.ExpiredIdTokenError):
+            elif isinstance(exc, firebase_auth.ExpiredIdTokenError):
                 raise AuthenticationFailed('Token expirado. Vuelve a iniciar sesión.')
-            if isinstance(exc, firebase_auth.InvalidIdTokenError):
+            elif isinstance(exc, firebase_auth.UserDisabledError):
+                raise AuthenticationFailed(
+                    'Tu cuenta ha sido desactivada. Contacta al soporte de Kora.')
+            elif isinstance(exc, firebase_auth.InvalidIdTokenError):
+                msg = str(exc)
+                if 'USER_NOT_FOUND' in msg or 'user_not_found' in msg.lower():
+                    raise AuthenticationFailed(
+                        'La cuenta de Google ya no existe. '
+                        'Crea una cuenta nueva o usa otro correo.')
                 raise AuthenticationFailed(f'Token de Google inválido: {exc}')
-        except (ImportError, AttributeError):
-            pass
+        except AuthenticationFailed:
+            raise  # re-lanzar los errores amigables que acabamos de crear
+        except PermissionDenied:
+            raise
+        except Exception:
+            pass  # ImportError, AttributeError u otro — caer al mensaje genérico
 
         raise AuthenticationFailed(f'No se pudo verificar el token: {exc}')
 

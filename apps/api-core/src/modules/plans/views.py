@@ -24,7 +24,12 @@ logger = logging.getLogger(__name__)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def planes_feed(request):
-    """Feed de planes activos filtrable por tipo, zona, tag."""
+    """Feed de planes activos filtrable por tipo, zona, tag.
+    El tipo visible se restringe automáticamente según las intenciones del usuario:
+      pareja  → date
+      amistad → social
+      estudio → estudio
+    """
     tipo = request.query_params.get('tipo')
     zona = request.query_params.get('zona')
     tag  = request.query_params.get('tag')
@@ -35,6 +40,24 @@ def planes_feed(request):
         es_publico=True,
     ).select_related('creador__profile').prefetch_related('participantes')
 
+    # Filtrar por tipos permitidos según intenciones del usuario
+    try:
+        intenciones = list(request.user.profile.intenciones or [])
+    except Exception:
+        intenciones = []
+
+    if intenciones:
+        # Mapeo 1:1: pareja→date, amistad→social, estudio→estudio
+        _INTENCION_A_TIPO = {
+            'pareja':  'date',
+            'amistad': 'social',
+            'estudio': 'estudio',
+        }
+        tipos_permitidos = [_INTENCION_A_TIPO[i] for i in intenciones if i in _INTENCION_A_TIPO]
+        if tipos_permitidos:
+            qs = qs.filter(tipo__in=tipos_permitidos)
+
+    # Filtros adicionales del query string (respetan los tipos ya acotados)
     if tipo:  qs = qs.filter(tipo=tipo)
     if zona:  qs = qs.filter(campus_zona__icontains=zona)
     if tag:   qs = qs.filter(tags__contains=[tag])
@@ -45,6 +68,26 @@ def planes_feed(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def crear_plan(request):
+    # Validar que el tipo del plan esté permitido según las intenciones del usuario
+    _INTENCION_A_TIPO = {
+        'pareja':  'date',
+        'amistad': 'social',
+        'estudio': 'estudio',
+    }
+    try:
+        intenciones = list(request.user.profile.intenciones or [])
+    except Exception:
+        intenciones = []
+
+    if intenciones:
+        tipos_permitidos = [_INTENCION_A_TIPO[i] for i in intenciones if i in _INTENCION_A_TIPO]
+        tipo_solicitado  = request.data.get('tipo')
+        if tipo_solicitado and tipos_permitidos and tipo_solicitado not in tipos_permitidos:
+            return Response(
+                {'error': f'No puedes crear planes de tipo "{tipo_solicitado}" con tus intenciones actuales.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     s = CreatePlanSerializer(data=request.data)
     s.is_valid(raise_exception=True)
     plan = s.save(creador=request.user)

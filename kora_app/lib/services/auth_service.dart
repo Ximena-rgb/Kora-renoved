@@ -96,7 +96,7 @@ class AuthService {
   static Future<Map<String, dynamic>> loginWithEmail(
       String email, String password) async {
     final resp = await http.post(
-      Uri.parse('$_baseUrl/api/v1/auth/login/'),
+      Uri.parse('$_baseUrl/api/v1/auth/debug/login/'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     ).timeout(const Duration(seconds: 20));
@@ -110,7 +110,7 @@ class AuthService {
   static Future<Map<String, dynamic>> register(
       String email, String password, String nombre) async {
     final resp = await http.post(
-      Uri.parse('$_baseUrl/api/v1/auth/register/'),
+      Uri.parse('$_baseUrl/api/v1/auth/debug/register/'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password, 'nombre': nombre}),
     ).timeout(const Duration(seconds: 20));

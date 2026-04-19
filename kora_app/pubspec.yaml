@@ -41,9 +41,37 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_native_splash: ^2.4.1
 
 flutter:
   uses-material-design: true
   assets:
     - .env
     - assets/images/
+
+# ── Splash Screen nativo (Android 12+ / iOS) ──────────────────────
+flutter_native_splash:
+  # Fondo: color oscuro de KORA (#0A0A0F)
+  color: "#0A0A0F"
+  color_dark: "#0A0A0F"
+
+  # Logo centrado — se genera desde assets/images/splash_logo.png
+  image: assets/images/splash_logo.png
+  image_dark: assets/images/splash_logo.png
+
+  # Sin fondo blanco al cambiar al tema normal
+  android_12:
+    color: "#0A0A0F"
+    color_dark: "#0A0A0F"
+    image: assets/images/splash_logo.png
+    image_dark: assets/images/splash_logo.png
+    # Tamaño del icono en Android 12+ (en dp)
+    icon_background_color: "#0A0A0F"
+    icon_background_color_dark: "#0A0A0F"
+
+  # Android específico
+  fullscreen: true
+
+  # iOS
+  ios: true
+  web: false

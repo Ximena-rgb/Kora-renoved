@@ -86,12 +86,39 @@ class AuthProvider with ChangeNotifier {
       return false;
 
     } on ApiException catch (e) {
-      _set(loading: false, error: e.message);
+      _set(loading: false, error: _mensajeErrorAmigable(e.message));
       return false;
     } catch (e) {
-      _set(loading: false, error: 'Error: ${e.toString()}');
+      _set(loading: false, error: _mensajeErrorAmigable(e.toString()));
       return false;
     }
+  }
+
+  /// Convierte mensajes de error técnicos del backend en mensajes amigables
+  String _mensajeErrorAmigable(String raw) {
+    final msg = raw.toLowerCase();
+    if (msg.contains('token revocado') || msg.contains('revoked')) {
+      return 'Tu sesión fue revocada. Vuelve a iniciar sesión con Google.';
+    }
+    if (msg.contains('token expirado') || msg.contains('expired')) {
+      return 'Tu sesión expiró. Por favor inicia sesión de nuevo.';
+    }
+    if (msg.contains('desactivada') || msg.contains('disabled')) {
+      return 'Tu cuenta ha sido desactivada. Escríbenos a soporte@kora.app';
+    }
+    if (msg.contains('ya no existe') || msg.contains('user_not_found') || msg.contains('not found')) {
+      return 'Esta cuenta de Google ya no existe. Intenta con otro correo.';
+    }
+    if (msg.contains('dominio') || msg.contains('solo cuentas')) {
+      return 'Solo puedes acceder con tu correo institucional universitario.';
+    }
+    if (msg.contains('email no verificado')) {
+      return 'Tu correo de Google no está verificado. Verifica tu cuenta y vuelve a intentar.';
+    }
+    if (msg.contains('invalid jwt') || msg.contains('invalid_grant')) {
+      return 'Hubo un problema con tu autenticación. Por favor intenta de nuevo.';
+    }
+    return raw;
   }
 
   // ── Verificar MFA ───────────────────────────────────────────────
@@ -150,6 +177,72 @@ class AuthProvider with ChangeNotifier {
   }
 
   void clearError() { _error = null; notifyListeners(); }
+
+  // ── Actualizar disponibilidad y bloque (legacy) ───────────────
+  Future<bool> updateDisponibilidad({
+    required bool disponible,
+    String? campusZona,
+  }) async {
+    try {
+      final body = <String, dynamic>{'disponible': disponible};
+      if (campusZona != null) body['campus_zona'] = campusZona;
+      final data = await ApiClient.patch('/api/v1/users/me/disponibilidad/', body: body);
+      if (_user != null) {
+        _user = _user!.copyWith(
+          disponible:  data['disponible'] ?? disponible,
+          campus_zona: data['campus_zona'] ?? campusZona ?? _user!.campus_zona,
+          estado: disponible ? EstadoUsuario.disponible : EstadoUsuario.ausente,
+        );
+        notifyListeners();
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── Actualizar estado (disponible / ocupado / ausente) ─────────
+  Future<bool> updateEstado(EstadoUsuario nuevoEstado) async {
+    if (_user == null) return false;
+    // Optimistic update
+    final estadoAnterior = _user!.estado;
+    _user = _user!.copyWith(
+      estado:     nuevoEstado,
+      disponible: nuevoEstado == EstadoUsuario.disponible,
+    );
+    notifyListeners();
+    try {
+      await ApiClient.patch('/api/v1/users/me/disponibilidad/', body: {
+        'disponible': nuevoEstado == EstadoUsuario.disponible,
+        'estado':     nuevoEstado.apiValue,
+      });
+      return true;
+    } catch (_) {
+      // Revertir si falla
+      _user = _user!.copyWith(
+        estado:     estadoAnterior,
+        disponible: estadoAnterior == EstadoUsuario.disponible,
+      );
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ── Actualizar ubicación (bloque campus) ───────────────────────
+  Future<bool> updateCampusZona(String campusZona) async {
+    if (_user == null) return false;
+    _user = _user!.copyWith(campus_zona: campusZona);
+    notifyListeners();
+    try {
+      await ApiClient.patch('/api/v1/users/me/disponibilidad/', body: {
+        'campus_zona': campusZona,
+        'disponible':  _user!.disponible,
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   // ── Login con Email/Contraseña ──────────────────────────────────
   Future<bool> loginWithEmail(String email, String password) async {

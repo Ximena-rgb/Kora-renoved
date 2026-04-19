@@ -6,16 +6,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Dependencias del sistema:
+# - libgl1, libglib2.0-0: OpenCV
+# - libgomp1: DeepFace / TensorFlow
+# - libpq-dev gcc: compilación de extensiones Python
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc libgl1 libglib2.0-0 \
+    libpq-dev gcc libgl1 libglib2.0-0 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-# Instalamos sin nudenet por defecto para no bloquear el arranque.
-# nudenet descarga modelos pesados; se activa añadiendo ENABLE_NSFW=true
-RUN pip install --no-cache-dir django==5.0.4 python-decouple==3.8 \
-    redis==5.0.4 Pillow==10.3.0 prometheus-client==0.20.0 requests==2.32.3 \
-    python-json-logger==2.0.7
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ .
 

@@ -30,14 +30,51 @@ class PasoOnboarding:
             return None
 
 
-# ── Género ────────────────────────────────────────────────────────
+# ── Género expandido ─────────────────────────────────────────────
 GENERO_CHOICES = [
-    ('masculino',  'Masculino'),
-    ('femenino',   'Femenino'),
-    ('no_binario', 'No binario'),
-    ('otro',       'Otro'),
-    ('prefiero_no_decir', 'Prefiero no decir'),
+    # Hombre
+    ('hombre_cis',       'Hombre cisgénero'),
+    ('hombre_trans',     'Hombre trans'),
+    ('hombre_intersex',  'Hombre intersexual'),
+    ('transmasculino',   'Transmasculino'),
+    # Mujer
+    ('mujer_cis',        'Mujer cisgénero'),
+    ('mujer_trans',      'Mujer trans'),
+    ('mujer_intersex',   'Mujer intersexual'),
+    ('transfemenino',    'Transfemenino'),
+    # Más allá del binario
+    ('agénero',          'Agénero'),
+    ('bigénero',         'Bigénero'),
+    ('género_fluido',    'Género fluido'),
+    ('genderqueer',      'Genderqueer'),
+    ('no_binario',       'No binario'),
+    ('pangénero',        'Pangénero'),
+    ('dos_espíritus',    'Dos espíritus'),
+    ('otro',             'Otro (especificar)'),
+    ('prefiero_no_decir','Prefiero no decir'),
 ]
+
+# Grupos para la UI de Flutter
+GENERO_GRUPOS = {
+    'Hombre': ['hombre_cis', 'hombre_trans', 'hombre_intersex', 'transmasculino'],
+    'Mujer':  ['mujer_cis',  'mujer_trans',  'mujer_intersex',  'transfemenino'],
+    'Más allá del binario': [
+        'agénero', 'bigénero', 'género_fluido', 'genderqueer',
+        'no_binario', 'pangénero', 'dos_espíritus', 'otro',
+    ],
+}
+
+# Géneros que se consideran "masculino" / "femenino" para matching de imagen
+GENERO_BINARIO_MASCULINO = {'hombre_cis', 'hombre_trans', 'hombre_intersex', 'transmasculino'}
+GENERO_BINARIO_FEMENINO  = {'mujer_cis',  'mujer_trans',  'mujer_intersex',  'transfemenino'}
+
+def genero_a_categoria(genero: str) -> str:
+    """Devuelve 'masculino' | 'femenino' | '' (para géneros no-binarios/otro)."""
+    if genero in GENERO_BINARIO_MASCULINO:
+        return 'masculino'
+    if genero in GENERO_BINARIO_FEMENINO:
+        return 'femenino'
+    return ''
 
 # ── Intenciones ───────────────────────────────────────────────────
 INTENCION_CHOICES = [
@@ -46,23 +83,29 @@ INTENCION_CHOICES = [
     ('estudio', 'Grupos de estudio'),
 ]
 
-# ── Orientación sexual ────────────────────────────────────────────
+# ── Orientación sexual expandida ──────────────────────────────────
 ORIENTACION_CHOICES = [
     ('heterosexual',    'Heterosexual'),
-    ('gay',             'Gay'),
+    ('gay',             'Gay / Homosexual'),
     ('lesbiana',        'Lesbiana'),
     ('bisexual',        'Bisexual'),
-    ('pansexual',       'Pansexual'),
     ('asexual',         'Asexual'),
+    ('demisexual',      'Demisexual'),
+    ('pansexual',       'Pansexual'),
+    ('queer',           'Queer'),
+    ('explorando',      'Explorando'),
+    ('arromántico',     'Arromántico'),
+    ('omnisexual',      'Omnisexual'),
+    ('otro',            'Otro (no aparece en la lista)'),
     ('prefiero_no_decir', 'Prefiero no decir'),
 ]
 
-# ── Interesado en conocer ─────────────────────────────────────────
+# ── ¿A quién te interesa ver? ─────────────────────────────────────
 INTERESADO_EN_CHOICES = [
-    ('hombres', 'Hombres'),
-    ('mujeres', 'Mujeres'),
-    ('otros',   'Otros géneros'),
-    ('todos',   'Todos'),
+    ('hombres',  'Hombres'),
+    ('mujeres',  'Mujeres'),
+    ('no_binario', 'Más allá del género binario'),
+    ('todos',    'Todxs'),
 ]
 
 # ── Hábitos ───────────────────────────────────────────────────────
@@ -76,6 +119,65 @@ FIESTA_CHOICES = [
     ('no',       'No'),
     ('a_veces',  'A veces'),
     ('si',       'Sí, soy fiestero/a'),
+]
+
+# ── Ejercicio ─────────────────────────────────────────────────────
+EJERCICIO_CHOICES = [
+    ('no',        'No hago ejercicio'),
+    ('ocasional', 'Ocasionalmente'),
+    ('regular',   'Regularmente'),
+    ('deportista','Deportista / atleta'),
+]
+
+# ── Mascotas ──────────────────────────────────────────────────────
+MASCOTAS_CHOICES = [
+    ('si',  'Sí, tengo mascotas'),
+    ('no',  'No tengo'),
+    ('quiero', 'No tengo pero quiero'),
+    ('alergia', 'Soy alérgico/a'),
+]
+
+# ── Estilo de comunicación ────────────────────────────────────────
+COMUNICACION_CHOICES = [
+    ('texto',     'Texto / chat'),
+    ('llamada',   'Llamadas / voz'),
+    ('presencial','Presencial'),
+    ('mixto',     'Mixto'),
+]
+
+# ── Lenguaje del amor ─────────────────────────────────────────────
+AMOR_CHOICES = [
+    ('palabras', 'Palabras de afirmación'),
+    ('tiempo',   'Tiempo de calidad'),
+    ('actos',    'Actos de servicio'),
+    ('regalos',  'Regalos'),
+    ('contacto', 'Contacto físico'),
+]
+
+# ── Nivel de escolaridad ──────────────────────────────────────────
+ESCOLARIDAD_CHOICES = [
+    ('pregrado',  'Pregrado (en curso)'),
+    ('tecnico',   'Técnico / tecnólogo'),
+    ('posgrado',  'Posgrado'),
+    ('otro',      'Otro'),
+]
+
+# ── Categorías de gustos (14 categorías) ──────────────────────────
+GUSTOS_CATEGORIAS = [
+    ('aire_libre',   'Aire libre 🏕️'),
+    ('bienestar',    'Bienestar 🧘'),
+    ('comer_beber',  'Comer & Beber 🍜'),
+    ('fans',         'Fans & Fandoms 🎭'),
+    ('creatividad',  'Creatividad 🎨'),
+    ('deporte',      'Deporte ⚽'),
+    ('musica',       'Música 🎵'),
+    ('en_casa',      'En casa 🏠'),
+    ('redes',        'Redes sociales 📱'),
+    ('salir',        'Salir & Fiesta 🎉'),
+    ('series',       'Series & Cine 🎬'),
+    ('valores',      'Valores & Espiritualidad 🌿'),
+    ('videojuegos',  'Videojuegos 🎮'),
+    ('tecnologia',   'Tecnología 💻'),
 ]
 
 # ── Hijos ─────────────────────────────────────────────────────────

@@ -68,6 +68,20 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text='[{"dia":"lunes","inicio":"08:00","fin":"10:00"}]'
     )
 
+    # ── Estado del usuario ────────────────────────────────────────
+    class EstadoUsuario(models.TextChoices):
+        ACTIVO     = 'activo',     'Activo'
+        OCUPADO    = 'ocupado',    'Ocupado'
+        INACTIVO   = 'inactivo',   'Inactivo'
+        EN_CLASES  = 'en_clases',  'En clases'
+
+    estado_usuario = models.CharField(
+        max_length=12,
+        choices=EstadoUsuario.choices,
+        default=EstadoUsuario.ACTIVO,
+        db_index=True,
+    )
+
     # ── Reputación ────────────────────────────────────────────────
     reputacion    = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     total_ratings = models.PositiveIntegerField(default=0)

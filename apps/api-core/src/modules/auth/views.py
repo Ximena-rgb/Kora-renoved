@@ -26,32 +26,44 @@ User = get_user_model()
 
 def _parse_nombre_google(display_name: str) -> tuple[str, str]:
     """
-    Separa el displayName de Google en nombre + apellido.
-    Aplica title() para capitalización correcta (no todo mayúsculas).
+    Separa el displayName de Google en nombres + apellidos.
+    Convención colombiana: primero los nombres, luego los apellidos.
 
-    Ejemplos:
-      "JUAN PABLO GARCIA LOPEZ" → ("Juan Pablo", "Garcia Lopez")
-      "María"                   → ("María", "")
-      "john doe"                → ("John", "Doe")
+    Reglas:
+      1 parte  → todo es nombre, apellido vacío
+      2 partes → 1 nombre + 1 apellido
+      3 partes → 1 nombre + 2 apellidos  (lo más común: "Juan García López")
+      4 partes → 2 nombres + 2 apellidos (ej: "Juan Pablo García López")
+      5 partes → 2 nombres + 3 apellidos (ej: "Ana María García López Martínez")
+      6+ partes → 3 nombres + resto apellidos
+
+    Se aplica title() para corregir todo-mayúsculas que a veces devuelve Google.
     """
     if not display_name:
         return ('', '')
 
-    partes = display_name.title().split()
+    partes = display_name.strip().title().split()
+    n = len(partes)
 
-    if len(partes) == 0:
+    if n == 0:
         return ('', '')
-    elif len(partes) == 1:
+    elif n == 1:
         return (partes[0], '')
-    elif len(partes) == 2:
+    elif n == 2:
+        # Juan García
         return (partes[0], partes[1])
-    elif len(partes) == 3:
-        # Ej: "Juan Garcia Lopez" → nombre="Juan", apellido="Garcia Lopez"
+    elif n == 3:
+        # Juan García López → 1 nombre, 2 apellidos
         return (partes[0], ' '.join(partes[1:]))
+    elif n == 4:
+        # Juan Pablo García López → 2 nombres, 2 apellidos
+        return (' '.join(partes[:2]), ' '.join(partes[2:]))
+    elif n == 5:
+        # Ana María García López Martínez → 2 nombres, 3 apellidos
+        return (' '.join(partes[:2]), ' '.join(partes[2:]))
     else:
-        # Ej: "Juan Pablo Garcia Lopez" → nombre="Juan Pablo", apellido="Garcia Lopez"
-        mitad = len(partes) // 2
-        return (' '.join(partes[:mitad]), ' '.join(partes[mitad:]))
+        # 6+ partes → 3 nombres + resto apellidos
+        return (' '.join(partes[:3]), ' '.join(partes[3:]))
 
 
 def _tokens_para(user) -> dict:
@@ -63,10 +75,18 @@ def _tokens_para(user) -> dict:
 
 
 def _serializar_user(user) -> dict:
+    # Intentar obtener el apellido del perfil (UserProfile)
+    apellido = ''
+    try:
+        apellido = user.profile.apellido or ''
+    except Exception:
+        pass
+
     return {
         'id':              user.id,
         'email':           user.email,
         'nombre':          user.nombre,
+        'apellido':        apellido,        # ← siempre incluido
         'foto_url':        user.foto_url or '',
         'carrera':         user.carrera or '',
         'facultad':        user.facultad or '',
@@ -125,24 +145,33 @@ def google_login(request):
 
     if created:
         user.set_unusable_password()
-        # Guardar apellido en el perfil si el modelo lo tiene directamente
-        # (sino se guarda en onboarding/UserProfile.apellido)
         user.save()
 
         # Crear perfil de onboarding con datos pre-llenados
+        # IMPORTANTE: envuelto en try/except amplio para que una migración
+        # pendiente nunca rompa el login (el perfil se puede crear después)
         try:
             from modules.onboarding.models import UserProfile
             profile, _ = UserProfile.objects.get_or_create(user=user)
-            profile.apellido = apellido
-            profile.save(update_fields=['apellido'])
+            if apellido:
+                profile.apellido = apellido
+                profile.save(update_fields=['apellido'])
         except Exception as e:
-            logger.warning(f'[google_login] No se pudo crear perfil: {e}')
+            logger.warning(f'[google_login] Perfil no creado ahora (se creará en onboarding): {e}')
 
-        broker.publish('USER_REGISTERED', {
-            'user_id': user.id,
-            'email':   email,
-        })
-        audit.log(request, audit.USER_REGISTERED, {'user_id': user.id, 'email': email})
+        try:
+            broker.publish('USER_REGISTERED', {
+                'user_id': user.id,
+                'email':   email,
+            })
+        except Exception as e:
+            logger.warning(f'[google_login] Broker publish falló: {e}')
+
+        try:
+            audit.log(request, audit.USER_REGISTERED, {'user_id': user.id, 'email': email})
+        except Exception as e:
+            logger.warning(f'[google_login] Audit log falló: {e}')
+
         logger.info(f'[google_login] ✅ Usuario creado: {email}')
     else:
         # Actualizar foto si cambió
@@ -159,7 +188,10 @@ def google_login(request):
         })
 
     tokens = _tokens_para(user)
-    audit.log(request, audit.USER_LOGIN, {'user_id': user.id})
+    try:
+        audit.log(request, audit.USER_LOGIN, {'user_id': user.id})
+    except Exception as e:
+        logger.warning(f'[google_login] Audit login falló: {e}')
 
     return Response({
         'access':  tokens['access'],
@@ -282,7 +314,169 @@ def mfa_deactivate(request):
     return Response({'mensaje': 'MFA desactivado.'})
 
 
-# ── POST /api/v1/auth/perfil/completar/ ──────────────────────────
+
+# ── POST /api/v1/auth/debug/login/ ───────────────────────────────
+# Solo disponible con DEBUG=True. Permite login con email/password
+# de cuentas Firebase para pruebas sin dominio institucional.
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def debug_login(request):
+    """
+    Endpoint de debug — autenticación con email+password de Firebase.
+    SOLO activo cuando DEBUG=True. En producción devuelve 404.
+    """
+    from django.conf import settings as django_settings
+    if not django_settings.DEBUG:
+        from django.http import Http404
+        raise Http404
+
+    email    = request.data.get('email', '').strip().lower()
+    password = request.data.get('password', '')
+    nombre   = request.data.get('nombre', '').strip() or email.split('@')[0]
+
+    if not email or not password:
+        return Response({'error': 'email y password son requeridos.'}, status=400)
+
+    # Autenticar contra Firebase con email+password via REST API
+    import requests as req_lib
+    import json
+
+    try:
+        firebase_api_key = _get_firebase_web_api_key()
+        if not firebase_api_key:
+            return Response(
+                {'error': 'FIREBASE_WEB_API_KEY no configurada en .env (debug).'},
+                status=500)
+
+        resp = req_lib.post(
+            f'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword'
+            f'?key={firebase_api_key}',
+            json={'email': email, 'password': password, 'returnSecureToken': True},
+            timeout=10,
+        )
+        firebase_data = resp.json()
+
+        if resp.status_code != 200:
+            msg = firebase_data.get('error', {}).get('message', 'Credenciales incorrectas.')
+            return Response({'error': f'Firebase: {msg}'}, status=401)
+
+        id_token = firebase_data.get('idToken')
+        uid      = firebase_data.get('localId')
+        if not id_token or not uid:
+            return Response({'error': 'Firebase no devolvió token.'}, status=500)
+
+    except Exception as exc:
+        logger.error(f'[debug_login] Firebase REST error: {exc}')
+        return Response({'error': f'Error autenticando: {exc}'}, status=500)
+
+    # Crear o recuperar usuario (sin validar dominio en debug)
+    user, created = User.objects.get_or_create(
+        firebase_uid=uid,
+        defaults={
+            'email':  email,
+            'nombre': nombre,
+        },
+    )
+    if created:
+        user.set_unusable_password()
+        user.save()
+        try:
+            from modules.onboarding.models import UserProfile
+            UserProfile.objects.get_or_create(user=user)
+        except Exception:
+            pass
+        logger.info(f'[debug_login] ✅ Usuario debug creado: {email}')
+    else:
+        logger.info(f'[debug_login] ✅ Login debug: {email}')
+
+    tokens = _tokens_para(user)
+    return Response({
+        'access':  tokens['access'],
+        'refresh': tokens['refresh'],
+        'user':    _serializar_user(user),
+    })
+
+
+# ── POST /api/v1/auth/debug/register/ ───────────────────────────
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def debug_register(request):
+    """
+    Crea usuario en Firebase con email+password y lo registra en Kora.
+    SOLO activo cuando DEBUG=True.
+    """
+    from django.conf import settings as django_settings
+    if not django_settings.DEBUG:
+        from django.http import Http404
+        raise Http404
+
+    email    = request.data.get('email', '').strip().lower()
+    password = request.data.get('password', '')
+    nombre   = request.data.get('nombre', '').strip() or email.split('@')[0]
+
+    if not email or not password:
+        return Response({'error': 'email y password son requeridos.'}, status=400)
+    if len(password) < 6:
+        return Response({'error': 'La contraseña debe tener al menos 6 caracteres.'}, status=400)
+
+    import requests as req_lib
+
+    try:
+        firebase_api_key = _get_firebase_web_api_key()
+        if not firebase_api_key:
+            return Response(
+                {'error': 'FIREBASE_WEB_API_KEY no configurada en .env (debug).'},
+                status=500)
+
+        resp = req_lib.post(
+            f'https://identitytoolkit.googleapis.com/v1/accounts:signUp'
+            f'?key={firebase_api_key}',
+            json={'email': email, 'password': password, 'returnSecureToken': True},
+            timeout=10,
+        )
+        firebase_data = resp.json()
+
+        if resp.status_code != 200:
+            msg = firebase_data.get('error', {}).get('message', 'Error al registrar.')
+            # EMAIL_EXISTS → devolver mensaje claro
+            if 'EMAIL_EXISTS' in msg:
+                return Response({'error': 'Este email ya está registrado en Firebase. Usa el login.'}, status=400)
+            return Response({'error': f'Firebase: {msg}'}, status=400)
+
+        id_token = firebase_data.get('idToken')
+        uid      = firebase_data.get('localId')
+
+    except Exception as exc:
+        logger.error(f'[debug_register] Firebase REST error: {exc}')
+        return Response({'error': f'Error registrando: {exc}'}, status=500)
+
+    user, created = User.objects.get_or_create(
+        firebase_uid=uid,
+        defaults={'email': email, 'nombre': nombre},
+    )
+    if created:
+        user.set_unusable_password()
+        user.save()
+        try:
+            from modules.onboarding.models import UserProfile
+            UserProfile.objects.get_or_create(user=user)
+        except Exception:
+            pass
+
+    tokens = _tokens_para(user)
+    return Response({
+        'access':  tokens['access'],
+        'refresh': tokens['refresh'],
+        'user':    _serializar_user(user),
+        'created': created,
+    }, status=201 if created else 200)
+
+
+def _get_firebase_web_api_key() -> str:
+    """Lee la Web API Key de Firebase desde .env."""
+    from django.conf import settings as s
+    return getattr(s, 'FIREBASE_WEB_API_KEY', '') or ''
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def completar_perfil(request):

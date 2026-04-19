@@ -1,0 +1,26 @@
+# flutter_native_splash configuration
+# Ejecuta: dart run flutter_native_splash:create
+# Esto genera los archivos nativos para Android e iOS automáticamente.
+
+flutter_native_splash:
+  # Color de fondo (igual que KoraColors.bg = 0xFF0A0A0F)
+  color: "#0A0A0F"
+  color_dark: "#0A0A0F"
+
+  # Logo centrado (sin fondo, solo el ícono sobre el color)
+  image: assets/images/splash_logo.png
+  image_dark: assets/images/splash_logo.png
+
+  # Pantalla completa (sin status bar ni navigation bar)
+  fullscreen: true
+
+  # Android 12+ (API 31+) usa SplashScreen API — configuración separada
+  android_12:
+    color: "#0A0A0F"
+    color_dark: "#0A0A0F"
+    image: assets/images/splash_logo.png
+    image_dark: assets/images/splash_logo.png
+    icon_background_color: "#0A0A0F"
+    icon_background_color_dark: "#0A0A0F"
+
+  web: false

@@ -12,4 +12,7 @@ urlpatterns = [
     path('logout/',           views.logout,          name='auth-logout'),
     path('perfil/completar/', views.completar_perfil, name='auth-completar-perfil'),
     path('me/',               views.me,               name='auth-me'),
+    # ── Debug only (solo activos cuando DEBUG=True) ───────────────
+    path('debug/login/',    views.debug_login,    name='auth-debug-login'),
+    path('debug/register/', views.debug_register, name='auth-debug-register'),
 ]

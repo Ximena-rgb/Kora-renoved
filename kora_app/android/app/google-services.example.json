@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "tu-project-number",
+    "project_id": "tu-project-id-de-firebase",
+    "storage_bucket": "tu-project-id.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:tu-project-number:android:tu-app-id",
+        "android_client_info": {
+          "package_name": "com.tuempresa.kora"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "tu-android-api-key"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

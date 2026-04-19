@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme.dart';
 import 'provider_plans.dart';
+import 'provider_matching.dart';
 import 'api_client.dart';
 
 int _toInt(dynamic v, [int fallback = 0]) {
@@ -25,7 +26,9 @@ class _PlansScreenState extends State<PlansScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final mp = context.read<MatchingProvider>();
+      await mp.cargarIntenciones(); // cargar intenciones para filtrar tipos
       context.read<PlansProvider>().cargarPlanes();
     });
   }
@@ -70,13 +73,32 @@ class _PlansScreenState extends State<PlansScreen>
   }
 
   Widget _buildFiltros() {
-    final tipos = {'': 'Todos', 'social': '🎉 Social', 'estudio': '📚 Estudio', 'date': '💑 Date'};
+    final mp = context.watch<MatchingProvider>();
+    final modos = mp.modosDisponibles;
+
+    // Mapeo 1:1: pareja→date, amistad→social, estudio→estudio
+    // Solo se muestran los tipos que corresponden a las intenciones elegidas.
+    // Si tiene múltiples intenciones se agrega "Todos" para ver el feed completo.
+    final Map<String, String> tipos = {};
+    if (modos.length > 1) tipos[''] = 'Todos';
+    if (modos.contains('estudio')) tipos['estudio'] = '📚 Estudio';
+    if (modos.contains('amistad')) tipos['social']  = '🤝 Social';
+    if (modos.contains('pareja'))  tipos['date']    = '💑 Date';
+
+    // Si no hay intenciones cargadas aún, mostrar todos
+    if (tipos.isEmpty || (tipos.length == 1 && tipos.containsKey(''))) {
+      tipos['estudio'] = '📚 Estudio';
+      tipos['social']  = '🤝 Social';
+      tipos['date']    = '💑 Date';
+    }
+
+    final tiposOrdenados = tipos;
     return SizedBox(
       height: 44,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: tipos.entries.map((e) {
+        children: tiposOrdenados.entries.map((e) {
           final sel = _tipo == e.key;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -313,11 +335,49 @@ class _CrearPlanSheetState extends State<_CrearPlanSheet> {
   final _titleCtrl = TextEditingController();
   final _descCtrl  = TextEditingController();
   final _ubicCtrl  = TextEditingController();
-  String _tipo     = 'social';
+  late String _tipo;
   DateTime? _hora;
   int _max         = 10;
   bool _loading    = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializar _tipo con el primer tipo correspondiente a las intenciones
+    final modos = context.read<MatchingProvider>().modosDisponibles;
+    if (modos.contains('estudio') && modos.length == 1) {
+      _tipo = 'estudio';
+    } else if (modos.contains('amistad') && !modos.contains('pareja')) {
+      _tipo = 'social';
+    } else if (modos.contains('pareja')) {
+      _tipo = 'date';
+    } else {
+      _tipo = 'estudio';
+    }
+  }
+
+  /// Tipos de planes disponibles según las intenciones del usuario.
+  /// Mapeo 1:1: pareja→date, amistad→social, estudio→estudio
+  List<DropdownMenuItem<String>> _tiposDisponibles(List<String> modos) {
+    final items = <DropdownMenuItem<String>>[];
+    if (modos.contains('estudio')) {
+      items.add(const DropdownMenuItem(value: 'estudio', child: Text('📚 Grupo de Estudio')));
+    }
+    if (modos.contains('amistad')) {
+      items.add(const DropdownMenuItem(value: 'social', child: Text('🤝 Social / Parche')));
+    }
+    if (modos.contains('pareja')) {
+      items.add(const DropdownMenuItem(value: 'date', child: Text('💑 Date')));
+    }
+    // Fallback si no hay intenciones cargadas
+    if (items.isEmpty) {
+      items.add(const DropdownMenuItem(value: 'estudio', child: Text('📚 Grupo de Estudio')));
+      items.add(const DropdownMenuItem(value: 'social',  child: Text('🤝 Social / Parche')));
+      items.add(const DropdownMenuItem(value: 'date',    child: Text('💑 Date')));
+    }
+    return items;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -339,11 +399,7 @@ class _CrearPlanSheetState extends State<_CrearPlanSheet> {
             dropdownColor: KoraColors.bgElevated,
             style: const TextStyle(color: KoraColors.textPrimary),
             decoration: const InputDecoration(labelText: 'Tipo'),
-            items: const [
-              DropdownMenuItem(value: 'social',  child: Text('🎉 Social / Parche')),
-              DropdownMenuItem(value: 'estudio', child: Text('📚 Grupo de Estudio')),
-              DropdownMenuItem(value: 'date',    child: Text('💑 Date')),
-            ],
+            items: _tiposDisponibles(context.read<MatchingProvider>().modosDisponibles),
             onChanged: (v) => setState(() => _tipo = v!),
           ),
           const SizedBox(height: 14),

@@ -70,23 +70,23 @@ def calificar(request):
     score = ScoreConfianza.objects.filter(user=a_usuario).first()
     return Response({
         'mensaje':    f'Calificaste a {a_usuario.nombre} con {data["nota"]}★',
-        'score_actual': round(score.score_total, 1) if score else None,
+        'reputacion_actual': round(score.score_total, 1) if score else None,
     }, status=201)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def mi_score(request):
-    """Score de confianza y desglose del usuario autenticado."""
+    """Reputación y desglose del usuario autenticado."""
     score, _ = ScoreConfianza.objects.get_or_create(user=request.user)
     insignias = Insignia.objects.filter(usuario=request.user)
     historial = EventoReputacion.objects.filter(usuario=request.user)[:20]
 
     return Response({
-        'score_total':        round(score.score_total, 1),
-        'score_calificacion': round(score.score_calificacion, 1),
-        'score_puntualidad':  round(score.score_puntualidad, 1),
-        'score_asistencia':   round(score.score_asistencia, 1),
+        'reputacion_total':    round(score.score_total, 1),
+        'reputacion_calificacion': round(score.score_calificacion, 1),
+        'reputacion_puntualidad':  round(score.score_puntualidad, 1),
+        'reputacion_asistencia':   round(score.score_asistencia, 1),
         'planes_asistidos':   score.planes_asistidos,
         'checkins_puntuales': score.checkins_puntuales,
         'calificacion_promedio': (
@@ -120,7 +120,7 @@ def score_usuario(request, user_id):
     return Response({
         'usuario_id':   usuario.id,
         'nombre':       usuario.nombre,
-        'score_total':  round(score.score_total, 1) if score else 50.0,
+        'reputacion_total': round(score.score_total, 1) if score else 50.0,
         'insignias':    [{'codigo': i.codigo, **i.info} for i in insignias],
         'calificacion_promedio': (
             round(score.suma_calificaciones / score.calificaciones_recibidas, 2)

@@ -15,6 +15,8 @@ from .constants import (
     HABITO_CHOICES, FIESTA_CHOICES, HIJOS_CHOICES, ACTIVIDAD_CHOICES,
     GUSTA_CARRERA_CHOICES, TRABAJO_PREF_CHOICES, FOTO_ESTADO_CHOICES,
     SIGNO_CHOICES, PasoOnboarding,
+    EJERCICIO_CHOICES, MASCOTAS_CHOICES, COMUNICACION_CHOICES,
+    AMOR_CHOICES, ESCOLARIDAD_CHOICES,
 )
 
 
@@ -46,6 +48,18 @@ class UserProfile(models.Model):
     # ══ PASO 2: Info básica ═══════════════════════════════════════
     apellido          = models.CharField(max_length=120, blank=True, default='')
     fecha_nacimiento  = models.DateField(null=True, blank=True)
+    # Sexo biológico — usado para validación de fotos
+    SEXO_CHOICES = [
+        ('hombre',            'Hombre'),
+        ('mujer',             'Mujer'),
+        ('intersexual',       'Intersexual'),
+        ('prefiero_no_decir', 'Prefiero no decir'),
+    ]
+    sexo_biologico    = models.CharField(
+        max_length=20, blank=True, default='',
+        choices=SEXO_CHOICES,
+        help_text='Sexo biológico — para validación de fotos'
+    )
     genero            = models.CharField(
         max_length=20, blank=True, default='', choices=GENERO_CHOICES
     )
@@ -92,6 +106,18 @@ class UserProfile(models.Model):
     bebe         = models.CharField(max_length=12, blank=True, default='', choices=HABITO_CHOICES)
     sale_fiesta  = models.CharField(max_length=12, blank=True, default='', choices=FIESTA_CHOICES)
 
+    # Nuevos hábitos expandidos
+    ejercicio          = models.CharField(max_length=12, blank=True, default='', choices=EJERCICIO_CHOICES)
+    mascotas           = models.CharField(max_length=12, blank=True, default='', choices=MASCOTAS_CHOICES)
+    cuales_mascotas    = models.CharField(max_length=200, blank=True, default='')
+    estilo_comunicacion = models.CharField(max_length=12, blank=True, default='', choices=COMUNICACION_CHOICES)
+    lenguaje_amor      = models.CharField(max_length=12, blank=True, default='', choices=AMOR_CHOICES)
+    nivel_escolaridad  = models.CharField(max_length=12, blank=True, default='', choices=ESCOLARIDAD_CHOICES)
+    categorias_gustos  = ArrayField(
+        models.CharField(max_length=20), default=list, blank=True,
+        help_text='Máximo 14 categorías de gustos'
+    )
+
     # Animales
     animales_gustan = models.BooleanField(null=True, blank=True)
     tiene_animales  = models.BooleanField(null=True, blank=True)
@@ -136,6 +162,12 @@ class UserProfile(models.Model):
     disponibilidad    = models.JSONField(
         default=list, blank=True,
         help_text='[{"dia":"lunes","inicio":"08:00","fin":"10:00"}]'
+    )
+
+    # Horario de clases (activa estado en_clases automáticamente)
+    horario_clases = models.JSONField(
+        default=list, blank=True,
+        help_text='[{"dia":"lunes","inicio":"08:00","fin":"10:00","materia":"Cálculo"}]'
     )
 
     # ── Timestamps ───────────────────────────────────────────────

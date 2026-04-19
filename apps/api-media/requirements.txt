@@ -3,5 +3,8 @@ redis==5.0.8
 requests==2.32.3
 prometheus-client==0.21.0
 opencv-python-headless==4.10.0.84
-# deepface==0.0.93    # Descomentar para validación de género (requiere ~2GB)
-# nudenet==3.4.2      # Descomentar para NSFW (requiere ~200MB)
+# Validación de género y edad
+deepface==0.0.93
+tf-keras
+# NSFW — contenido inapropiado
+nudenet==3.4.2
